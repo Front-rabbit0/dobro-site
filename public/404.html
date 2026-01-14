@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting...</title>
+    <script>
+      // GitHub Pages SPA redirect
+      // Берём текущий путь и переносим его в hash, чтобы SPA восстановила маршрут
+      var path = window.location.pathname;
+      var repo = "/dobro-site"; // <-- ВАЖНО: имя репозитория
+      if (path.startsWith(repo)) path = path.slice(repo.length);
+      window.location.replace(window.location.origin + repo + "/#"+ path + window.location.search);
+    </script>
+  </head>
+  <body></body>
+</html>

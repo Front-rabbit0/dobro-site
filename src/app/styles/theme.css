@@ -1,0 +1,35 @@
+:root {
+  /* DVFU-like palette */
+  --primary: #1e4fa3;          /* основной синий */
+  --primary-hover: #193f83;
+  --secondary: #3f7bd9;        /* голубой */
+  --secondary-hover: #3569bb;
+  --accent: #c6293d;           /* красный акцент */
+  --accent-hover: #ad2235;
+
+  /* Neutrals */
+  --bg: #f5f7fb;               /* фон страницы */
+  --surface: #ffffff;          /* карточки/панели */
+  --text: #101828;
+  --muted: #667085;
+  --border: #e6e8f0;
+
+  /* States */
+  --success: #12b76a;
+  --danger: #f04438;
+
+  /* Radius / shadows */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+
+  --shadow-sm: 0 2px 10px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 14px 34px rgba(16, 24, 40, 0.12);
+
+  /* Layout */
+  --container: 1200px;
+  --gutter: 24px;
+
+  /* Focus ring */
+  --ring: 0 0 0 4px rgba(30, 79, 163, 0.18);
+}

@@ -6,16 +6,22 @@ import { OpportunityDetailsPage } from "@/pages/OpportunityDetailsPage/Opportuni
 import { NotFoundPage } from "@/pages/NotFoundPage/NotFoundPage";
 import { CabinetPage } from "@/pages/CabinetPage/CabinetPage";
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <AppLayout />,
+      children: [
+        { index: true, element: <HomePage /> },
+        { path: "opportunities", element: <OpportunitiesPage /> },
+        { path: "opportunities/:id", element: <OpportunityDetailsPage /> },
+        { path: "cabinet", element: <CabinetPage /> },
+        { path: "*", element: <NotFoundPage /> },
+      ],
+    },
+  ],
   {
-    path: "/",
-    element: <AppLayout />,
-    children: [
-      { index: true, element: <HomePage /> },
-      { path: "opportunities", element: <OpportunitiesPage /> },
-      { path: "opportunities/:id", element: <OpportunityDetailsPage /> },
-      { path: "*", element: <NotFoundPage /> },
-      { path: "cabinet", element: <CabinetPage /> },
-    ],
-  },
-]);
+    // ✅ В dev будет "/", в GitHub Pages будет "/dobro-site/"
+    basename: import.meta.env.BASE_URL,
+  }
+);

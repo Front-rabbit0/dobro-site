@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
 
-/**
- * Хук для работы с localStorage как с обычным useState
- * @param {string} key
- * @param {*} initialValue
- */
 export function useLocalStorage(key, initialValue) {
   const [value, setValue] = useState(() => {
     try {
@@ -19,7 +14,7 @@ export function useLocalStorage(key, initialValue) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {
-      // может упасть в приватном режиме — игнорируем
+      // ignore
     }
   }, [key, value]);
 

@@ -3,9 +3,11 @@ import { Card } from "@/shared/ui/Card/Card";
 import { Button } from "@/shared/ui/Button/Button";
 import { MyApplications } from "@/widgets/cabinet/MyApplications/MyApplications";
 import { Profile } from "@/widgets/cabinet/Profile/Profile";
+import { MyProjects } from "@/widgets/cabinet/MyProjects/MyProjects";
+
 
 export function CabinetPage() {
-  const [tab, setTab] = useState("applications"); // applications | profile
+  const [tab, setTab] = useState("applications"); // applications | projects | profile
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
@@ -26,11 +28,17 @@ export function CabinetPage() {
             >
               Профиль
             </Button>
+            <Button
+              variant={tab === "projects" ? "primary" : "secondary"}
+              onClick={() => setTab("projects")}
+            >
+              Мои проекты
+            </Button>
           </div>
         </Card.Body>
       </Card>
 
-      {tab === "applications" ? <MyApplications /> : <Profile />}
+      {tab === "applications" ? <MyApplications /> : tab === "projects" ? <MyProjects /> : <Profile />}
     </div>
   );
 }

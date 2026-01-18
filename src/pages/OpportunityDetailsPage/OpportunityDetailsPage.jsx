@@ -1,94 +1,177 @@
-import { useParams, Link } from "react-router-dom";
-import { opportunitiesMock } from "@/entities/opportunity/model/mock";
-import { Card } from "@/shared/ui/Card/Card";
-import { Badge } from "@/shared/ui/Badge/Badge";
-import { Button } from "@/shared/ui/Button/Button";
-import { useState } from "react";
-import { useApplications } from "@/features/applications/model/useApplications";
-import { ApplyModal } from "@/features/applications/ui/ApplyModal";
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
+import { Card } from "@/shared/ui/Card/Card";
+import { Button } from "@/shared/ui/Button/Button";
+import { Badge } from "@/shared/ui/Badge/Badge";
+import { Modal } from "@/shared/ui/Modal/Modal";
+
+import { opportunitiesMock } from "@/entities/opportunity/model/mock";
+import { useProjects } from "@/entities/project/model/useProjects";
+import { useApplications } from "@/features/applications/model/useApplications";
+import { useProfile } from "@/entities/user/model/useProfile";
+
+function mapProjectToOpportunity(p) {
+  return {
+    id: `p_${p.id}`,
+    title: p.title,
+    description: p.description,
+    city: p.city,
+    isActive: p.status === "active" || p.status === "in_progress",
+    status: p.status,
+    directions: p.directions ?? [],
+    source: "user",
+  };
+}
+
+function appLabel(status) {
+  if (status === "approved") return "Заявка подтверждена";
+  if (status === "rejected") return "Заявка отклонена";
+  return "Заявка отправлена";
+}
 
 export function OpportunityDetailsPage() {
   const { id } = useParams();
+  const nav = useNavigate();
 
-  const opportunity = opportunitiesMock.find((item) => item.id === id);
-
+  const projects = useProjects();
   const apps = useApplications();
-  const existing = opportunity ? apps.getByProjectId(opportunity.id) : null;
+  const { profile } = useProfile();
+
+  // ✅ userId берём из профиля (вариант B)
+  const userId = profile?.email?.trim()
+    ? profile.email.trim().toLowerCase()
+    : "me";
+
+  const userEmail = profile?.email?.trim() ? profile.email.trim() : "";
+  const userName = profile?.fullName?.trim()
+    ? profile.fullName.trim()
+    : profile?.name?.trim()
+      ? profile.name.trim()
+      : "Пользователь";
+
+  const opportunity = useMemo(() => {
+    // 1) Моки
+    const mock = opportunitiesMock.find((x) => String(x.id) === String(id));
+    if (mock) return mock;
+
+    // 2) Созданные проекты
+    if (String(id).startsWith("p_")) {
+      const realId = String(id).slice(2);
+      const p = projects.getById(realId);
+      if (p) return mapProjectToOpportunity(p);
+    }
+
+    return null;
+  }, [id, projects, projects.projects]);
+
+  const application = opportunity
+    ? apps.getMyByProjectId(opportunity.id, userId)
+    : null;
 
   const [openApply, setOpenApply] = useState(false);
 
-
   if (!opportunity) {
     return (
-      <div>
-        <h1>Возможность не найдена</h1>
-        <Link to="/opportunities">← Вернуться к каталогу</Link>
+      <div style={{ display: "grid", gap: 12 }}>
+        <h1>Проект не найден</h1>
+        <Button variant="secondary" onClick={() => nav(-1)}>
+          Назад
+        </Button>
       </div>
     );
   }
 
+  const directions =
+    Array.isArray(opportunity.directions) && opportunity.directions.length
+      ? opportunity.directions
+      : opportunity.category
+        ? [opportunity.category]
+        : [];
+
+  const canApply = profile?.role === "student";
+
   return (
-    <div style={{ display: "grid", gap: 24 }}>
-      <Link to="/opportunities">← Назад к каталогу</Link>
+    <div style={{ display: "grid", gap: 18 }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <Button variant="secondary" onClick={() => nav(-1)}>
+          ← Назад
+        </Button>
+
+        <Badge variant={opportunity.isActive ? "success" : "default"}>
+          {opportunity.isActive ? "Активно" : "Завершено"}
+        </Badge>
+
+        {application ? <Badge variant="primary">{appLabel(application.status)}</Badge> : null}
+      </div>
 
       <Card>
-        <Card.Header>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <h1>{opportunity.title}</h1>
-            <Badge variant={opportunity.isActive ? "success" : "default"}>
-              {opportunity.isActive ? "Активно" : "Завершено"}
-            </Badge>
-          </div>
-        </Card.Header>
-
         <Card.Body>
-          <p style={{ marginBottom: 16 }}>{opportunity.description}</p>
+          <div style={{ display: "grid", gap: 10 }}>
+            <h1 style={{ margin: 0 }}>{opportunity.title}</h1>
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Badge>{opportunity.city}</Badge>
-            <Badge variant="primary">{opportunity.category}</Badge>
+            {opportunity.city ? (
+              <div style={{ fontSize: 14, color: "var(--muted)", fontWeight: 700 }}>
+                📍 {opportunity.city}
+              </div>
+            ) : null}
+
+            {directions.length ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {directions.map((d) => (
+                  <Badge key={d} variant="primary">
+                    {d}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+
+            <p style={{ margin: 0 }}>{opportunity.description}</p>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
+              {application ? (
+                <Button variant="secondary" onClick={() => apps.cancelById(application.id)}>
+                  Отозвать отклик
+                </Button>
+              ) : canApply ? (
+                <Button onClick={() => setOpenApply(true)}>Принять участие</Button>
+              ) : (
+                <Badge>Отклик доступен только студенту</Badge>
+              )}
+            </div>
           </div>
         </Card.Body>
-
-        <Card.Footer>
-          {existing ? (
-            <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ fontWeight: 700 }}>
-                Статус заявки:{" "}
-                {existing.status === "pending"
-                  ? "На рассмотрении"
-                  : existing.status === "approved"
-                    ? "Подтверждена"
-                    : "Отклонена"}
-              </div>
-
-              <Button variant="secondary" onClick={() => apps.cancel(opportunity.id)}>
-                Отозвать заявку
-              </Button>
-            </div>
-          ) : (
-            <Button
-              fullWidth
-              disabled={!opportunity.isActive}
-              onClick={() => setOpenApply(true)}
-            >
-              {opportunity.isActive ? "Принять участие" : "Набор завершён"}
-            </Button>
-          )}
-        </Card.Footer>
       </Card>
-      <ApplyModal
+
+      <Modal
         open={openApply}
-        projectTitle={opportunity.title}
+        title="Отклик на проект"
         onClose={() => setOpenApply(false)}
-        onSubmit={(payload) =>
-          apps.apply({
-            projectId: opportunity.id,
-            ...payload,
-          })
+        footer={
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <Button variant="secondary" onClick={() => setOpenApply(false)}>
+              Отмена
+            </Button>
+            <Button
+              onClick={() => {
+                apps.apply(opportunity.id, {
+                  userId,
+                  userEmail,
+                  userName,
+                  message: "",
+                });
+                setOpenApply(false);
+              }}
+            >
+              Отправить
+            </Button>
+          </div>
         }
-      />
+      >
+        <p style={{ margin: 0, color: "var(--muted)" }}>
+          Сейчас это MVP: отправляем отклик без текста. Позже добавим сообщение и данные пользователя.
+        </p>
+      </Modal>
     </div>
   );
 }

@@ -1,63 +1,128 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "@/shared/hooks/useLocalStorage";
 
 const STORAGE_KEY = "mvp.applications";
+const STATUSES = ["pending", "approved", "rejected"];
 
-function nowIso() {
-  return new Date().toISOString();
+function safeStatus(status) {
+  return STATUSES.includes(status) ? status : "pending";
+}
+
+function uid() {
+  return (crypto?.randomUUID?.() ?? String(Math.random()).slice(2)) + "";
 }
 
 export function useApplications() {
   const [apps, setApps] = useLocalStorage(STORAGE_KEY, []);
 
-  const getByProjectId = useCallback(
-    (projectId) => apps.find((a) => a.projectId === String(projectId)) ?? null,
-    [apps]
+  // Мягкая миграция старых записей (без userId/appId и т.п.)
+  const normalized = useMemo(() => {
+    return (apps ?? []).map((a) => ({
+      id: a.id ?? uid(),
+      projectId: String(a.projectId ?? a.id ?? ""),
+      userId: a.userId ?? "legacy",
+      userEmail: a.userEmail ?? "",
+      userName: a.userName ?? "Пользователь",
+      message: a.message ?? "",
+      status: safeStatus(a.status),
+      createdAt: a.createdAt ?? new Date().toISOString(),
+      updatedAt: a.updatedAt ?? a.createdAt ?? new Date().toISOString(),
+    }));
+  }, [apps]);
+
+  const replaceAll = useCallback(
+    (next) => {
+      setApps(next);
+    },
+    [setApps]
+  );
+
+  const listByProjectId = useCallback(
+    (projectId) => normalized.filter((a) => a.projectId === String(projectId)),
+    [normalized]
+  );
+
+  const getMyByProjectId = useCallback(
+    (projectId, userId) =>
+      normalized.find(
+        (a) => a.projectId === String(projectId) && a.userId === String(userId)
+      ) ?? null,
+    [normalized]
+  );
+
+  const listMine = useCallback(
+    (userId) => normalized.filter((a) => a.userId === String(userId)),
+    [normalized]
   );
 
   const apply = useCallback(
-    ({ projectId, name, email, message }) => {
+    (projectId, payload) => {
       const pid = String(projectId);
+      const userId = String(payload?.userId ?? "me");
 
-      setApps((prev) => {
-        // если уже есть — не дублируем
-        const existing = prev.find((a) => a.projectId === pid);
-        if (existing) return prev;
+      // не даём одному пользователю подать 2 заявки на один проект
+      const already = normalized.some((a) => a.projectId === pid && a.userId === userId);
+      if (already) return;
 
-        return [
-          ...prev,
-          {
-            id: crypto?.randomUUID?.() ?? String(Math.random()).slice(2),
-            projectId: pid,
-            status: "pending", // pending | approved | rejected
-            createdAt: nowIso(),
-            applicant: { name, email },
-            message: message ?? "",
-          },
-        ];
-      });
+      const next = [
+        {
+          id: uid(),
+          projectId: pid,
+          userId,
+          userEmail: payload?.userEmail ?? "",
+          userName: payload?.userName ?? "Пользователь",
+          message: payload?.message ?? "",
+          status: "pending",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        ...normalized,
+      ];
+
+      replaceAll(next);
     },
-    [setApps]
+    [normalized, replaceAll]
   );
 
-  const cancel = useCallback(
-    (projectId) => {
-      const pid = String(projectId);
-      setApps((prev) => prev.filter((a) => a.projectId !== pid));
+  const cancelById = useCallback(
+    (applicationId) => {
+      const id = String(applicationId);
+      replaceAll(normalized.filter((a) => a.id !== id));
     },
-    [setApps]
+    [normalized, replaceAll]
   );
 
-  // (на будущее) для куратора/организации: менять статус
+  const cancelMy = useCallback(
+    (projectId, userId) => {
+      const pid = String(projectId);
+      const uid2 = String(userId);
+      replaceAll(normalized.filter((a) => !(a.projectId === pid && a.userId === uid2)));
+    },
+    [normalized, replaceAll]
+  );
+
   const setStatus = useCallback(
-    (projectId, status) => {
-      const pid = String(projectId);
-      setApps((prev) =>
-        prev.map((a) => (a.projectId === pid ? { ...a, status } : a))
+    (applicationId, status) => {
+      const id = String(applicationId);
+      const st = safeStatus(status);
+
+      replaceAll(
+        normalized.map((a) =>
+          a.id === id ? { ...a, status: st, updatedAt: new Date().toISOString() } : a
+        )
       );
     },
-    [setApps]
+    [normalized, replaceAll]
   );
 
-  return { apps, getByProjectId, apply, cancel, setStatus };
+  return {
+    apps: normalized,              // массив заявок
+    listByProjectId,               // заявки по проекту (массив)
+    getMyByProjectId,              // моя заявка по проекту (1 или null)
+    listMine,                      // мои заявки (для "Мои отклики")
+    apply,                         // создать заявку
+    cancelById,                    // удалить заявку по id
+    cancelMy,                      // удалить мою заявку по (projectId,userId)
+    setStatus,                     // approve/reject по id заявки
+  };
 }

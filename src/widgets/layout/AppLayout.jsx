@@ -1,9 +1,33 @@
-import { Outlet, Link, NavLink } from "react-router-dom";
+import { Outlet, Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Container } from "@/shared/ui/Container/Container";
 import { Button } from "@/shared/ui/Button/Button";
 import styles from "./AppLayout.module.css";
+import { useAuth } from "@/entities/auth/model/useAuth";
 
 export function AppLayout() {
+  const { isAuthenticated, logout, role } = useAuth();
+  const nav = useNavigate();
+  const location = useLocation();
+
+  function goLogin() {
+    nav("/login", { state: { from: location.pathname } });
+  }
+
+  function goApply() {
+    if (!isAuthenticated) {
+      nav("/login", { state: { from: "/opportunities" } });
+      return;
+    }
+    nav("/opportunities");
+  }
+
+  function onLogout() {
+    logout();
+    nav("/", { replace: true });
+  }
+
+  const showApply = !isAuthenticated || role === "student";
+
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -42,11 +66,36 @@ export function AppLayout() {
               >
                 Кабинет
               </NavLink>
+
+              {/* ✅ Админка только для куратора */}
+              {isAuthenticated && role === "curator" ? (
+                <NavLink
+                  to="/admin/stats"
+                  className={({ isActive }) =>
+                    isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
+                  }
+                >
+                  Админ
+                </NavLink>
+              ) : null}
             </nav>
 
             <div className={styles.headerActions}>
-              <Button variant="secondary">Войти</Button>
-              <Button variant="accent">Подать заявку</Button>
+              {isAuthenticated ? (
+                <Button variant="danger" onClick={onLogout}>
+                  Выйти
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={goLogin}>
+                  Войти
+                </Button>
+              )}
+
+              {showApply ? (
+                <Button variant="accent" onClick={goApply}>
+                  Подать заявку
+                </Button>
+              ) : null}
             </div>
           </div>
         </Container>
@@ -60,9 +109,7 @@ export function AppLayout() {
 
       <footer className={styles.footer}>
         <Container>
-          <div className={styles.footerInner}>
-            © {new Date().getFullYear()} DVFU-like platform
-          </div>
+          <div className={styles.footerInner}>© {new Date().getFullYear()} DVFU-like platform</div>
         </Container>
       </footer>
     </div>

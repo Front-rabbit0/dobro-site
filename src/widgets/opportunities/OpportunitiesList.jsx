@@ -1,9 +1,7 @@
 import { OpportunityCard } from "@/entities/opportunity/ui/OpportunityCard";
 
-export function OpportunitiesList({ items, getApplicationById, onCancelApplication }) {
-  if (!items.length) {
-    return <div>Ничего не найдено по вашим фильтрам.</div>;
-  }
+export function OpportunitiesList({ items, getMyApplication, onCancelApplication }) {
+  if (!items.length) return <div>Ничего не найдено по вашим фильтрам.</div>;
 
   return (
     <div
@@ -14,14 +12,18 @@ export function OpportunitiesList({ items, getApplicationById, onCancelApplicati
         alignItems: "start",
       }}
     >
-      {items.map((opportunity) => (
-        <OpportunityCard
-          key={opportunity.id}
-          opportunity={opportunity}
-          application={getApplicationById(opportunity.id)}
-          onCancelApplication={() => onCancelApplication(opportunity.id)}
-        />
-      ))}
+      {items.map((opportunity) => {
+        const application = getMyApplication(opportunity.id);
+
+        return (
+          <OpportunityCard
+            key={opportunity.id}
+            opportunity={opportunity}
+            application={application}
+            onCancelApplication={application ? () => onCancelApplication(application.id) : undefined}
+          />
+        );
+      })}
     </div>
   );
 }

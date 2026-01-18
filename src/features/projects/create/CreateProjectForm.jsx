@@ -3,6 +3,8 @@ import { Card } from "@/shared/ui/Card/Card";
 import { Input } from "@/shared/ui/Input/Input";
 import { Button } from "@/shared/ui/Button/Button";
 import { createProjectDto } from "@/entities/project/model/createProjectDto";
+import { MultiSelect } from "@/shared/ui/MultiSelect/MultiSelect";
+
 
 const DIRECTIONS = [
   "Экология",
@@ -17,6 +19,8 @@ const DIRECTIONS = [
   "Спорт",
   "Право и помощь",
 ];
+
+const DIRECTION_OPTIONS = DIRECTIONS.map((d) => ({ value: d, label: d }));
 
 export function CreateProjectForm({ onCreate, onCancel }) {
   const [p, setP] = useState(() => createProjectDto());
@@ -118,38 +122,13 @@ export function CreateProjectForm({ onCreate, onCancel }) {
             </label>
 
             {/* Направления как мультивыбор */}
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>
-                Направления (можно несколько)
-              </span>
-
-              <select
-                multiple
+              <MultiSelect
+                label="Направления (можно несколько)"
+                placeholder="Выберите направления"
+                options={DIRECTION_OPTIONS}
                 value={p.directions}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-                  setField("directions", selected);
-                }}
-                style={{
-                  width: "100%",
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  padding: "10px 12px",
-                  background: "var(--surface)",
-                  minHeight: 120,
-                }}
-              >
-                {DIRECTIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-
-              <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                Подсказка: удерживай Ctrl (Windows) или Cmd (Mac) для выбора нескольких.
-              </div>
-            </label>
+                onChange={(next) => setField("directions", next)}
+              />
           </div>
 
           {/* Описание */}

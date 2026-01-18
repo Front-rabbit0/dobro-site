@@ -5,6 +5,7 @@ import { Card } from "@/shared/ui/Card/Card";
 import { Button } from "@/shared/ui/Button/Button";
 import { Badge } from "@/shared/ui/Badge/Badge";
 import { CreateProjectForm } from "@/features/projects/create/CreateProjectForm";
+import { ProjectApplicationsModal } from "@/widgets/projects/ProjectApplicationsModal/ProjectApplicationsModal";
 
 function statusLabel(status) {
   if (status === "in_progress") return "В процессе";
@@ -17,8 +18,14 @@ export function MyProjects() {
   const projects = useProjects();
   const [creating, setCreating] = useState(false);
 
+  const [openApps, setOpenApps] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+
+
   const canCreate = profile.role === "org" || profile.role === "curator";
-  const mine = projects.getMine("me");
+  const ownerId = String(profile.email ?? "me").toLowerCase();
+  const mine = projects.getMine(ownerId);
+
 
   if (!canCreate) {
     return (
@@ -59,7 +66,13 @@ export function MyProjects() {
       {creating ? (
         <CreateProjectForm
           onCreate={(p) => {
-            projects.add(p);
+            const ownerId = String(profile.email ?? "me").toLowerCase();
+
+            projects.add({
+              ...p,
+              ownerId,
+            });
+
             setCreating(false);
           }}
           onCancel={() => setCreating(false)}
@@ -115,6 +128,15 @@ export function MyProjects() {
                       <Button variant="secondary" onClick={() => projects.remove(p.id)}>
                         Удалить
                       </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setSelectedProject(p);
+                          setOpenApps(true);
+                        }}
+                      >
+                        Отклики
+                      </Button>
                     </div>
                   </div>
                 </Card.Body>
@@ -123,6 +145,11 @@ export function MyProjects() {
           })}
         </div>
       )}
+      <ProjectApplicationsModal
+        open={openApps}
+        onClose={() => setOpenApps(false)}
+        project={selectedProject}
+      />
     </div>
   );
 }

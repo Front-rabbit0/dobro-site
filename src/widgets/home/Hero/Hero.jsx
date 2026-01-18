@@ -19,18 +19,12 @@ export function Hero() {
             <Link to="/opportunities">
               <Button>Найти проект</Button>
             </Link>
-
-            <Link to="/about">
-              <Button variant="secondary">О проекте</Button>
-            </Link>
           </div>
 
-          <div style={{ display: "display", gap: 10 }}>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <MiniStat title="Проекты" value="120+" />
-              <MiniStat title="Участники" value="3 000+" />
-              <MiniStat title="Организации" value="80+" />
-            </div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <MiniStat title="Проекты" value="120+" />
+            <MiniStat title="Участники" value="3 000+" />
+            <MiniStat title="Организации" value="80+" />
           </div>
         </div>
       </Card.Body>

@@ -1,0 +1,128 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  /* критично для grid/flex, чтобы не распирало */
+}
+
+
+.control {
+  width: 100%;
+  height: 44px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  /* критично */
+  height: 44px;
+  /* остальное оставь как есть */
+  /* фиксируем высоту */
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: var(--surface);
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.value {
+  flex: 1;
+  min-width: 0;
+  /* важно для ellipsis */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* многоточие */
+  font-size: 14px;
+}
+
+.placeholder {
+  color: var(--muted);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clearBtn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 10px;
+  height: 28px;
+  padding: 0 10px;
+  cursor: pointer;
+  font-weight: 900;
+  opacity: 0.75;
+}
+
+.clearBtn:hover {
+  opacity: 1;
+  box-shadow: var(--shadow-sm);
+}
+
+.chev {
+  opacity: 0.7;
+  user-select: none;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.menuInner {
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: rgba(16, 24, 40, 0.04);
+}
+
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.smallBtn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.smallBtn:hover {
+  box-shadow: var(--shadow-sm);
+}

@@ -6,6 +6,8 @@ import { OpportunitiesList } from "@/widgets/opportunities/OpportunitiesList";
 import { opportunitiesMock } from "@/entities/opportunity/model/mock";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { useApplications } from "@/features/applications/model/useApplications";
+import { useProjects } from "@/entities/project/model/useProjects";
+import { useProfile } from "@/entities/user/model/useProfile";
 
 function normalize(value) {
   return String(value ?? "").trim().toLowerCase();
@@ -15,33 +17,49 @@ function getBoolParam(sp, key) {
   return sp.get(key) === "1";
 }
 
+function mapProjectToOpportunity(p) {
+  return {
+    id: `p_${p.id}`, // чтобы не пересекалось с моками
+    title: p.title,
+    description: p.description,
+    city: p.city,
+    isActive: p.status === "active" || p.status === "in_progress",
+    status: p.status,
+    directions: p.directions ?? [],
+    source: "user",
+  };
+}
+
 export function OpportunitiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const apps = useApplications();
+  const projects = useProjects();
+  const { profile } = useProfile();
+  const userId = profile?.email?.trim() ? profile.email.trim().toLowerCase() : "me";
 
-  // Источник правды из URL (чтобы при обновлении страницы всё сохранялось)
+  // Источник правды из URL
   const urlFilters = {
     q: searchParams.get("q") ?? "",
     city: searchParams.get("city") ?? "",
     activeOnly: getBoolParam(searchParams, "active"),
-    myOnly: searchParams.get("my") === "1",
+    myOnly: getBoolParam(searchParams, "my"),
     sort: searchParams.get("sort") ?? "relevance", // relevance | title
   };
 
-  // Локальная форма (чтобы печатать комфортно)
+  // Локальная форма
   const [form, setForm] = useState(urlFilters);
 
-  // Если URL поменялся — синхронизируем форму
+  // Синхронизация формы при back/forward
   useEffect(() => {
     setForm(urlFilters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.toString()]);
 
-  // Debounce только для текстовых полей
+  // debounce для текстовых полей
   const dq = useDebouncedValue(form.q, 300);
   const dcity = useDebouncedValue(form.city, 300);
 
-  // Авто-применение при дебаунсе + при переключении чекбокса/сортировки
+  // Записываем фильтры в URL
   useEffect(() => {
     const next = new URLSearchParams();
 
@@ -55,20 +73,19 @@ export function OpportunitiesPage() {
     if (form.sort && form.sort !== "relevance") next.set("sort", form.sort);
 
     setSearchParams(next, { replace: true });
-  }, [
-    dq,
-    dcity,
-    form.activeOnly,
-    form.myOnly,
-    form.sort,
-    setSearchParams,
-  ]);
+  }, [dq, dcity, form.activeOnly, form.myOnly, form.sort, setSearchParams]);
 
   const filteredItems = useMemo(() => {
     const q = normalize(urlFilters.q);
     const city = normalize(urlFilters.city);
 
-    let items = opportunitiesMock.filter((item) => {
+    // ✅ объединяем: созданные проекты + моки
+    const allItems = [
+      ...projects.projects.map(mapProjectToOpportunity),
+      ...opportunitiesMock,
+    ];
+
+    let items = allItems.filter((item) => {
       const title = normalize(item.title);
       const description = normalize(item.description);
       const itemCity = normalize(item.city);
@@ -77,7 +94,7 @@ export function OpportunitiesPage() {
       const matchesCity = !city || itemCity.includes(city);
       const matchesActive = !urlFilters.activeOnly || item.isActive;
 
-      const hasMyApp = apps.getByProjectId(item.id) != null;
+      const hasMyApp = apps.getMyByProjectId(item.id, userId) != null;
       const matchesMy = !urlFilters.myOnly || hasMyApp;
 
       return matchesQ && matchesCity && matchesActive && matchesMy;
@@ -94,7 +111,9 @@ export function OpportunitiesPage() {
     urlFilters.activeOnly,
     urlFilters.myOnly,
     urlFilters.sort,
-    apps.apps, // чтобы пересчиталось, когда появится/исчезнет заявка
+    apps.apps, // чтобы пересчитывалось при изменении заявок
+    projects.projects, // чтобы пересчитывалось при создании проектов
+    userId,
   ]);
 
   function updateField(name, value) {
@@ -102,6 +121,7 @@ export function OpportunitiesPage() {
   }
 
   function applyNow() {
+    // мгновенно пробрасываем form в URL (без debounce)
     const next = new URLSearchParams();
 
     const q = String(form.q ?? "").trim();
@@ -134,8 +154,8 @@ export function OpportunitiesPage() {
 
       <OpportunitiesList
         items={filteredItems}
-        getApplicationById={apps.getByProjectId}
-        onCancelApplication={apps.cancel}
+        getMyApplication={(projectId) => apps.getMyByProjectId(projectId, userId)}
+        onCancelApplication={(appId) => apps.cancelById(appId)}
       />
     </div>
   );

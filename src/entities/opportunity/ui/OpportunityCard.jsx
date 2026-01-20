@@ -103,7 +103,6 @@ export function OpportunityCard({ opportunity, application, onCancelApplication 
               Отозвать
             </Button>
           ) : canApplyButton ? (
-            // ✅ теперь кнопка сама решает: логин или проект
             <Button onClick={onApplyClick}>Откликнуться</Button>
           ) : null}
         </div>

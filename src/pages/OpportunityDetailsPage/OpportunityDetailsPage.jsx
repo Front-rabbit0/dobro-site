@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { Card } from "@/shared/ui/Card/Card";
 import { Button } from "@/shared/ui/Button/Button";
@@ -10,6 +10,7 @@ import { opportunitiesMock } from "@/entities/opportunity/model/mock";
 import { useProjects } from "@/entities/project/model/useProjects";
 import { useApplications } from "@/features/applications/model/useApplications";
 import { useProfile } from "@/entities/user/model/useProfile";
+import { useAuth } from "@/entities/auth/model/useAuth"; // ✅ важно: реальная авторизация
 
 function mapProjectToOpportunity(p) {
   return {
@@ -33,22 +34,33 @@ function appLabel(status) {
 export function OpportunityDetailsPage() {
   const { id } = useParams();
   const nav = useNavigate();
+  const location = useLocation();
 
   const projects = useProjects();
   const apps = useApplications();
   const { profile } = useProfile();
+  const auth = useAuth();
 
-  // ✅ userId берём из профиля (вариант B)
-  const userId = profile?.email?.trim()
-    ? profile.email.trim().toLowerCase()
-    : "me";
+  // ✅ если бэк-авторизация уже есть — используем её как главный источник
+  const authEmail = auth?.me?.email?.trim?.() ? auth.me.email.trim().toLowerCase() : "";
+  const authName =
+    auth?.me?.fullName?.trim?.()
+      ? auth.me.fullName.trim()
+      : auth?.me?.name?.trim?.()
+        ? auth.me.name.trim()
+        : "";
 
-  const userEmail = profile?.email?.trim() ? profile.email.trim() : "";
-  const userName = profile?.fullName?.trim()
-    ? profile.fullName.trim()
-    : profile?.name?.trim()
-      ? profile.name.trim()
-      : "Пользователь";
+  const profileEmail = profile?.email?.trim?.() ? profile.email.trim().toLowerCase() : "";
+  const profileName =
+    profile?.fullName?.trim?.()
+      ? profile.fullName.trim()
+      : profile?.name?.trim?.()
+        ? profile.name.trim()
+        : "";
+
+  const userId = authEmail || profileEmail || ""; // ⚠️ но отправка возможна только если isAuthenticated
+  const userEmail = authEmail || (profile?.email?.trim?.() ? profile.email.trim() : "");
+  const userName = authName || profileName || "Пользователь";
 
   const opportunity = useMemo(() => {
     // 1) Моки
@@ -65,7 +77,7 @@ export function OpportunityDetailsPage() {
     return null;
   }, [id, projects, projects.projects]);
 
-  const application = opportunity
+  const application = opportunity && userId
     ? apps.getMyByProjectId(opportunity.id, userId)
     : null;
 
@@ -89,7 +101,41 @@ export function OpportunityDetailsPage() {
         ? [opportunity.category]
         : [];
 
-  const canApply = profile?.role === "student";
+  // ✅ САМАЯ ВАЖНАЯ ПРАВКА:
+  // откликать может только АВТОРИЗОВАННЫЙ студент
+  const canApply = auth.isAuthenticated && (auth.role === "student" || profile?.role === "student");
+
+  function requireLogin() {
+    nav("/login", { state: { from: `/opportunities/${opportunity.id}` } });
+  }
+
+  function onClickApply() {
+    if (!auth.isAuthenticated) {
+      requireLogin();
+      return;
+    }
+    if (!canApply) return;
+    setOpenApply(true);
+  }
+
+  function onSend() {
+    // двойная защита — даже если модалка открылась “как-то”
+    if (!auth.isAuthenticated) {
+      setOpenApply(false);
+      requireLogin();
+      return;
+    }
+    if (!userId) return;
+
+    apps.apply(opportunity.id, {
+      userId,
+      userEmail,
+      userName,
+      message: "",
+    });
+
+    setOpenApply(false);
+  }
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
@@ -133,10 +179,14 @@ export function OpportunityDetailsPage() {
                 <Button variant="secondary" onClick={() => apps.cancelById(application.id)}>
                   Отозвать отклик
                 </Button>
-              ) : canApply ? (
-                <Button onClick={() => setOpenApply(true)}>Принять участие</Button>
+              ) : auth.isAuthenticated ? (
+                canApply ? (
+                  <Button onClick={onClickApply}>Принять участие</Button>
+                ) : (
+                  <Badge>Отклик доступен только студенту</Badge>
+                )
               ) : (
-                <Badge>Отклик доступен только студенту</Badge>
+                <Button onClick={requireLogin}>Войти, чтобы откликнуться</Button>
               )}
             </div>
           </div>
@@ -152,17 +202,7 @@ export function OpportunityDetailsPage() {
             <Button variant="secondary" onClick={() => setOpenApply(false)}>
               Отмена
             </Button>
-            <Button
-              onClick={() => {
-                apps.apply(opportunity.id, {
-                  userId,
-                  userEmail,
-                  userName,
-                  message: "",
-                });
-                setOpenApply(false);
-              }}
-            >
+            <Button onClick={onSend}>
               Отправить
             </Button>
           </div>

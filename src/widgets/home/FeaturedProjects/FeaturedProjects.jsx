@@ -4,22 +4,18 @@ import { OpportunityCard } from "@/entities/opportunity/ui/OpportunityCard";
 import { Button } from "@/shared/ui/Button/Button";
 import { useApplications } from "@/features/applications/model/useApplications";
 import { useAuth } from "@/entities/auth/model/useAuth";
-import { useProfile } from "@/entities/user/model/useProfile";
 
 export function FeaturedProjects() {
   const top = opportunitiesMock.slice(0, 3);
 
   const apps = useApplications();
   const auth = useAuth();
-  const { profile } = useProfile();
 
-  // В MVP userId часто = email. Берём из auth, а если нет — из profile (но откликаться без auth всё равно нельзя).
+  // ✅ ВАЖНО: "мой userId" существует ТОЛЬКО когда я авторизован
   const userId =
-    auth?.me?.email?.trim?.()
+    auth.isAuthenticated && auth?.me?.email?.trim?.()
       ? auth.me.email.trim().toLowerCase()
-      : profile?.email?.trim?.()
-        ? profile.email.trim().toLowerCase()
-        : "";
+      : "";
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -47,8 +43,7 @@ export function FeaturedProjects() {
         }}
       >
         {top.map((op) => {
-          const myApp =
-            userId ? apps.getMyByProjectId(op.id, userId) : null;
+          const myApp = userId ? apps.getMyByProjectId(op.id, userId) : null;
 
           return (
             <OpportunityCard
@@ -56,7 +51,6 @@ export function FeaturedProjects() {
               opportunity={op}
               application={myApp}
               onCancelApplication={() => {
-                // если заявка есть — можно удалить по id
                 if (myApp?.id) apps.cancelById(myApp.id);
               }}
             />

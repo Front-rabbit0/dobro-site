@@ -7,7 +7,7 @@ import { opportunitiesMock } from "@/entities/opportunity/model/mock";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { useApplications } from "@/features/applications/model/useApplications";
 import { useProjects } from "@/entities/project/model/useProjects";
-import { useProfile } from "@/entities/user/model/useProfile";
+import { useAuth } from "@/entities/auth/model/useAuth";
 
 function normalize(value) {
   return String(value ?? "").trim().toLowerCase();
@@ -32,10 +32,16 @@ function mapProjectToOpportunity(p) {
 
 export function OpportunitiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+
   const apps = useApplications();
   const projects = useProjects();
-  const { profile } = useProfile();
-  const userId = profile?.email?.trim() ? profile.email.trim().toLowerCase() : "me";
+  const auth = useAuth();
+
+  // ✅ ВАЖНО: userId существует только когда авторизован
+  const userId =
+    auth.isAuthenticated && auth?.me?.email?.trim?.()
+      ? auth.me.email.trim().toLowerCase()
+      : "";
 
   // Источник правды из URL
   const urlFilters = {
@@ -94,7 +100,8 @@ export function OpportunitiesPage() {
       const matchesCity = !city || itemCity.includes(city);
       const matchesActive = !urlFilters.activeOnly || item.isActive;
 
-      const hasMyApp = apps.getMyByProjectId(item.id, userId) != null;
+      // ✅ ВАЖНО: "мои" заявки считаем только если авторизован
+      const hasMyApp = userId ? apps.getMyByProjectId(item.id, userId) != null : false;
       const matchesMy = !urlFilters.myOnly || hasMyApp;
 
       return matchesQ && matchesCity && matchesActive && matchesMy;
@@ -154,7 +161,8 @@ export function OpportunitiesPage() {
 
       <OpportunitiesList
         items={filteredItems}
-        getMyApplication={(projectId) => apps.getMyByProjectId(projectId, userId)}
+        // ✅ ВАЖНО: если не авторизован — возвращаем null, чтобы карточки не показывали "заявка отправлена"
+        getMyApplication={(projectId) => (userId ? apps.getMyByProjectId(projectId, userId) : null)}
         onCancelApplication={(appId) => apps.cancelById(appId)}
       />
     </div>

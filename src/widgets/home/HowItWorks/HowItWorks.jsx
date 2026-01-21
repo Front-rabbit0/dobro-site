@@ -29,12 +29,6 @@ export function HowItWorks() {
           text="Ведите работу по задачам, получайте фидбек и подтверждение участия."
         />
       </div>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Badge variant="primary">Студент</Badge>
-        <Badge>Куратор</Badge>
-        <Badge>Организация</Badge>
-      </div>
     </div>
   );
 }
